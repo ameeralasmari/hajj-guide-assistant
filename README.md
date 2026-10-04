@@ -19,7 +19,7 @@ common questions quickly, in the pilgrim's own language.
 - Sends users to official sources (Nusuk, Ministry of Hajj and Umrah) instead of guessing
 - Directs emergencies to emergency services
 - Retries when the AI service is busy and automatically falls back to another Gemini Flash model
-- Keeps a chat history (saved locally in `chats.json`) with a New chat button
+- Keeps a chat history with a New chat button (saved locally in `chats.json`; on the hosted demo it lasts only for your browser session, for privacy)
 - Clean, minimal design in white, Hajj green and gold, with an animated Kaaba while it thinks
 
 ## How it works

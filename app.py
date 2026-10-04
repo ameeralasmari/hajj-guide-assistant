@@ -18,6 +18,9 @@ load_dotenv()
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 CHATS_FILE = Path(__file__).with_name("chats.json")
+# On Streamlit Community Cloud every visitor shares the same server, so chats are
+# NOT saved to disk there (that would show one visitor's chats to another).
+ON_CLOUD = Path(__file__).resolve().as_posix().startswith("/mount/src")
 USER_AVATAR, BOT_AVATAR = "🤲", "🕋"
 
 SYSTEM_PROMPT = """You are a friendly guide assistant for pilgrims performing Hajj and Umrah in Saudi Arabia.
@@ -88,7 +91,7 @@ FOOTER = '<div class="foot">AI can make mistakes. For permits and official servi
 
 # ---------- Chat history (saved to chats.json) ----------
 def load_chats():
-    if CHATS_FILE.exists():
+    if not ON_CLOUD and CHATS_FILE.exists():
         try:
             return json.loads(CHATS_FILE.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
@@ -97,6 +100,8 @@ def load_chats():
 
 
 def save_chats():
+    if ON_CLOUD:
+        return
     try:
         CHATS_FILE.write_text(
             json.dumps(st.session_state.chats, ensure_ascii=False, indent=2), encoding="utf-8"
