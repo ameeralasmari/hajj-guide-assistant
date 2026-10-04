@@ -5,6 +5,7 @@ Chats are saved locally in chats.json so the history survives restarts.
 """
 import json
 import os
+import re
 import time
 import uuid
 from pathlib import Path
@@ -127,14 +128,23 @@ def fallback_models(_client):
     return [n for n in sorted(set(names), reverse=True) if n != MODEL][:2]
 
 
+def retry_delay(exc):
+    """Seconds Google asks us to wait on a rate-limit error (None if not given)."""
+    m = re.search(r"retry(?:Delay\W+|\s+in\s+)(\d+(?:\.\d+)?)s", str(exc))
+    return float(m.group(1)) if m else None
+
+
 def ask_gemini(client, messages):
     # Gemini uses the role "model" for the assistant.
+    recent = messages[-12:]  # keep requests small
+    while recent and recent[0]["role"] != "user":
+        recent = recent[1:]
     history = [
         types.Content(
             role="user" if m["role"] == "user" else "model",
             parts=[types.Part(text=m["text"])],
         )
-        for m in messages
+        for m in recent
     ]
     last = None  # the last busy/limit error, so we can tell the user what happened
     for model in [MODEL] + fallback_models(client):
@@ -150,6 +160,11 @@ def ask_gemini(client, messages):
                 if exc.code == 503:  # overloaded: wait a moment and retry once
                     last = exc
                     time.sleep(2)
+                    continue
+                wait = retry_delay(exc) if exc.code == 429 else None
+                if wait is not None and wait <= 20 and attempt == 0:
+                    last = exc  # per-minute limit: wait the time Google asks for, then retry
+                    time.sleep(wait + 1)
                     continue
                 if exc.code in (404, 429):  # model missing or limit reached: try the next model
                     last = exc
