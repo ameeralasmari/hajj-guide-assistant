@@ -136,7 +136,7 @@ def ask_gemini(client, messages):
         )
         for m in messages
     ]
-    busy = False
+    last = None  # the last busy/limit error, so we can tell the user what happened
     for model in [MODEL] + fallback_models(client):
         for attempt in range(2):
             try:
@@ -147,18 +147,22 @@ def ask_gemini(client, messages):
                 )
                 return response.text or "Sorry, I couldn't generate an answer. Please try again."
             except errors.APIError as exc:
-                if exc.code in (429, 503):  # busy or rate limited: wait, retry, then next model
-                    busy = True
-                    time.sleep(2 * (attempt + 1))
+                if exc.code == 503:  # overloaded: wait a moment and retry once
+                    last = exc
+                    time.sleep(2)
                     continue
-                if exc.code == 404:  # this model isn't available: try the next one
+                if exc.code in (404, 429):  # model missing or limit reached: try the next model
+                    last = exc
                     break
                 return f"Something went wrong: {exc}"
             except Exception as exc:  # network problems, etc.
                 return f"Something went wrong: {exc}"
-    if busy:
-        return "The AI service is very busy right now. Please send your message again in a minute."
-    return "No AI model is available. Check GEMINI_MODEL in your .env file."
+    if last is None:
+        return "No AI model is available. Check GEMINI_MODEL in your .env file."
+    detail = f"(error {last.code} {last.status})"
+    if last.code == 429:
+        return f"The free usage limit has been reached for now. Please try again in a few minutes. {detail}"
+    return f"The AI service is very busy right now. Please send your message again in a minute. {detail}"
 
 
 # ---------- Page ----------
