@@ -29,8 +29,7 @@ The interface is a Streamlit chat page. A welcome screen with example questions 
 
 ## Run it locally
 ```bash
-git clone https://github.com/<your-username>/hajj-guide-assistant.git
-cd hajj-guide-assistant
+git clone https://github.com/ameeralasmari/hajj-guide-assistant.git
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env        # then add your Gemini API key from Google AI Studio
